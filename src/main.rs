@@ -1,5 +1,4 @@
 use clap::Parser;
-use colored::*; // For coloring output text (like warnings)
 use ignore::{DirEntry, WalkBuilder}; // For directory traversal respecting .gitignore etc.
 use lazy_static::lazy_static; // For static HashMap initialization
 use std::collections::HashMap;
@@ -129,7 +128,6 @@ fn main() -> Result<(), AppError> {
             eprintln!(
                 "{}",
                 "No input paths provided either as arguments or via stdin. Use --help for usage."
-                    .yellow()
             );
             return Ok(()); // Exit gracefully if no input
         }
@@ -162,7 +160,7 @@ fn main() -> Result<(), AppError> {
     // Handle the case where cli.paths might be empty after attempting stdin read
     if cli.paths.is_empty() {
         // This case should ideally be caught earlier, but double-check
-        eprintln!("{}", "No valid paths found to process.".yellow());
+        eprintln!("{}", "No valid paths found to process.");
         return Ok(());
     }
     let mut walker_builder = WalkBuilder::new(&cli.paths[0]); // Start with the first path
@@ -217,7 +215,6 @@ fn main() -> Result<(), AppError> {
                                 "Warning: Skipping file {} - Not valid UTF-8.",
                                 path.display()
                             )
-                            .yellow()
                         );
                     }
                     Err(e) => {
@@ -229,18 +226,13 @@ fn main() -> Result<(), AppError> {
                                 path.display(),
                                 e
                             )
-                            .yellow()
                         );
                     }
                 }
             }
             Err(err) => {
                 // Handle errors during the walk (could be permission issues, invalid patterns, etc.)
-                eprintln!(
-                    "{} {}",
-                    "Warning: Error during directory walk:".yellow(),
-                    err
-                );
+                eprintln!("{} {}", "Warning: Error during directory walk:", err);
             }
         }
     }
