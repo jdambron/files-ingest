@@ -1,45 +1,44 @@
 use clap::Parser;
 use ignore::{DirEntry, WalkBuilder}; // For directory traversal respecting .gitignore etc.
-use lazy_static::lazy_static; // For static HashMap initialization
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{self, BufWriter, Read, Write}; // Standard Input/Output operations
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 use std::sync::atomic::{AtomicUsize, Ordering}; // For the global CXML index
 use thiserror::Error; // For custom error types // Import the atty crate
 
 // --- Configuration & Constants ---
 
 // Static map for file extensions to Markdown language tags
-lazy_static! {
-    static ref EXT_TO_LANG: HashMap<&'static str, &'static str> = {
-        let mut m = HashMap::new();
-        m.insert("py", "python");
-        m.insert("rs", "rust");
-        m.insert("c", "c");
-        m.insert("h", "c");
-        m.insert("cpp", "cpp");
-        m.insert("hpp", "cpp");
-        m.insert("java", "java");
-        m.insert("js", "javascript");
-        m.insert("ts", "typescript");
-        m.insert("html", "html");
-        m.insert("css", "css");
-        m.insert("xml", "xml");
-        m.insert("json", "json");
-        m.insert("yaml", "yaml");
-        m.insert("yml", "yaml");
-        m.insert("sh", "bash");
-        m.insert("rb", "ruby");
-        m.insert("md", "markdown");
-        m.insert("toml", "toml");
-        m.insert("go", "go");
-        m.insert("php", "php");
-        m.insert("swift", "swift");
-        m.insert("kt", "kotlin");
-        m.insert("sql", "sql");
-        m
-    };
+static EXT_TO_LANG: OnceLock<HashMap<&'static str, &'static str>> = OnceLock::new();
+fn initialize_language_map() -> HashMap<&'static str, &'static str> {
+    let mut m = HashMap::new();
+    m.insert("py", "python");
+    m.insert("rs", "rust");
+    m.insert("c", "c");
+    m.insert("h", "c");
+    m.insert("cpp", "cpp");
+    m.insert("hpp", "cpp");
+    m.insert("java", "java");
+    m.insert("js", "javascript");
+    m.insert("ts", "typescript");
+    m.insert("html", "html");
+    m.insert("css", "css");
+    m.insert("xml", "xml");
+    m.insert("json", "json");
+    m.insert("yaml", "yaml");
+    m.insert("yml", "yaml");
+    m.insert("sh", "bash");
+    m.insert("rb", "ruby");
+    m.insert("md", "markdown");
+    m.insert("toml", "toml");
+    m.insert("go", "go");
+    m.insert("php", "php");
+    m.insert("swift", "swift");
+    m.insert("kt", "kotlin");
+    m.insert("sql", "sql");
+    m
 }
 
 // Global counter for Claude XML document index
@@ -390,8 +389,19 @@ fn print_file(
         // Markdown Format
         let lang = path
             .extension()
-            .and_then(|ext| ext.to_str())
-            .and_then(|ext_str| EXT_TO_LANG.get(ext_str.to_lowercase().as_str())) // Lowercase extension for lookup
+            .and_then(|ext| ext.to_str()) // Get extension as &str
+            .and_then(|ext_str| {
+                // Access the OnceLock, initializing it if this is the first time
+                EXT_TO_LANG
+                    .get_or_init(|| {
+                        // This closure runs only once to initialize the map
+                        // eprintln!("Initializing language map..."); // Optional debug print
+                        initialize_language_map() // Call the initializer function
+                        // Alternatively, put the HashMap creation logic directly here:
+                        // let mut m = HashMap::new(); /* ... inserts ... */ m
+                    })
+                    .get(ext_str.to_lowercase().as_str()) // Now get from the initialized HashMap
+            })
             .unwrap_or(&""); // Get language tag or empty string
 
         // Determine necessary backtick count (handle content with backticks)
