@@ -125,7 +125,6 @@ fn main() -> Result<(), AppError> {
         read_paths_from_stdin(&mut cli.paths, cli.null_separator)?;
         if cli.paths.is_empty() {
             eprintln!(
-                "{}",
                 "No input paths provided either as arguments or via stdin. Use --help for usage."
             );
             return Ok(()); // Exit gracefully if no input
@@ -159,7 +158,7 @@ fn main() -> Result<(), AppError> {
     // Handle the case where cli.paths might be empty after attempting stdin read
     if cli.paths.is_empty() {
         // This case should ideally be caught earlier, but double-check
-        eprintln!("{}", "No valid paths found to process.");
+        eprintln!("No valid paths found to process.");
         return Ok(());
     }
     let mut walker_builder = WalkBuilder::new(&cli.paths[0]); // Start with the first path
@@ -210,7 +209,7 @@ fn main() -> Result<(), AppError> {
                         // Handle non-UTF-8 files gracefully
                         eprintln!(
                             "{}",
-                            format!(
+                            format_args!(
                                 "Warning: Skipping file {} - Not valid UTF-8.",
                                 path.display()
                             )
@@ -220,7 +219,7 @@ fn main() -> Result<(), AppError> {
                         // Handle other file reading errors
                         eprintln!(
                             "{}",
-                            format!(
+                            format_args!(
                                 "Warning: Skipping file {} - Error reading: {}",
                                 path.display(),
                                 e
@@ -231,7 +230,7 @@ fn main() -> Result<(), AppError> {
             }
             Err(err) => {
                 // Handle errors during the walk (could be permission issues, invalid patterns, etc.)
-                eprintln!("{} {}", "Warning: Error during directory walk:", err);
+                eprintln!("Warning: Error during directory walk: {err}");
             }
         }
     }
@@ -252,7 +251,7 @@ fn main() -> Result<(), AppError> {
 /// Checks if a directory entry should be processed based on CLI options.
 fn should_process_entry(entry: &DirEntry, cli: &Cli) -> bool {
     // Only process files
-    if !entry.file_type().map_or(false, |ft| ft.is_file()) {
+    if !entry.file_type().is_some_and(|ft| ft.is_file()) {
         return false;
     }
 
@@ -374,15 +373,15 @@ fn print_file(
     if cxml {
         // Claude XML Format
         let index = GLOBAL_INDEX.fetch_add(1, Ordering::SeqCst); // Increment and get previous value
-        writeln!(writer, "<document index=\"{}\">", index)?;
-        writeln!(writer, "<source>{}</source>", display_path)?; // Use relative path
+        writeln!(writer, "<document index=\"{index}\">")?;
+        writeln!(writer, "<source>{display_path}</source>")?; // Use relative path
         writeln!(writer, "<document_content>")?;
         // Basic XML escaping for content - replace '&', '<', '>'
         let escaped_content = processed_content
             .replace('&', "&amp;")
             .replace('<', "&lt;")
             .replace('>', "&gt;");
-        writeln!(writer, "{}", escaped_content)?; // Write potentially line-numbered and escaped content
+        writeln!(writer, "{escaped_content}")?; // Write potentially line-numbered and escaped content
         writeln!(writer, "</document_content>")?;
         writeln!(writer, "</document>")?;
     } else if markdown {
@@ -410,16 +409,16 @@ fn print_file(
             backticks.push('`');
         }
 
-        writeln!(writer, "{}", display_path)?; // File path (relative)
-        writeln!(writer, "{}{}", backticks, lang)?; // Opening fence with language tag
-        writeln!(writer, "{}", processed_content)?; // File content (potentially line-numbered)
-        writeln!(writer, "{}", backticks)?; // Closing fence
+        writeln!(writer, "{display_path}")?; // File path (relative)
+        writeln!(writer, "{backticks}{lang}")?; // Opening fence with language tag
+        writeln!(writer, "{processed_content}")?; // File content (potentially line-numbered)
+        writeln!(writer, "{backticks}")?; // Closing fence
         writeln!(writer)?; // Add a blank line for separation
     } else {
         // Default Format
-        writeln!(writer, "{}", display_path)?; // File path (relative)
+        writeln!(writer, "{display_path}")?; // File path (relative)
         writeln!(writer, "---")?;
-        writeln!(writer, "{}", processed_content)?; // File content (potentially line-numbered)
+        writeln!(writer, "{processed_content}")?; // File content (potentially line-numbered)
         // writeln!(writer)?; // Original python version adds blank line here - removed for closer match
         writeln!(writer, "---")?;
         writeln!(writer)?; // Add blank line after the closing separator
