@@ -69,6 +69,7 @@ enum AppError {
     about = "Concatenates files into a single prompt, similar to Python's files-to-prompt.",
     long_about = "Takes one or more paths to files or directories and outputs the content of each file, recursively. Supports filtering, ignoring files (.gitignore), and various output formats (default, Claude XML, Markdown)."
 )]
+#[allow(clippy::struct_excessive_bools)]
 struct Cli {
     /// Paths to files or directories to process. Reads from stdin if empty.
     #[arg(name = "PATHS")]

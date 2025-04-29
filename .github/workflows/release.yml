@@ -1,0 +1,99 @@
+name: Release
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+
+env:
+  CARGO_TERM_COLOR: always
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target:
+          [
+            "x86_64-unknown-linux-gnu",
+            "x86_64-unknown-linux-musl",
+            "armv7-unknown-linux-gnueabihf",
+          ]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install prerequisites
+        run: |
+          case ${{ matrix.target }} in
+            arm*) sudo apt-get -y update ; sudo apt-get -y install gcc-arm-linux-gnueabihf ;;
+          esac
+      - name: Install target
+        run: rustup update && rustup target add ${{ matrix.target }}
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: "files-ingest-${{ matrix.target }}"
+          path: "target/${{ matrix.target }}/release/files-ingest"
+          if-no-files-found: error
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install apple darwin target
+        run: rustup update && rustup target add aarch64-apple-darwin
+      - name: Build macos
+        run: cargo build --release --target=aarch64-apple-darwin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: "files-ingest-aarch64-apple-darwin"
+          path: "target/aarch64-apple-darwin/release/files-ingest"
+          if-no-files-found: error
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install target
+        run: rustup update && rustup target add x86_64-pc-windows-msvc
+      - name: Build Windows
+        run: cargo build --release --target x86_64-pc-windows-msvc
+      - uses: actions/upload-artifact@v4
+        with:
+          name: "files-ingest-x86_64-pc-windows-msvc"
+          path: "target/x86_64-pc-windows-msvc/release/files-ingest.exe"
+          if-no-files-found: error
+
+  release-upload:
+    needs:
+      - build-linux
+      - build-macos
+      - build-windows
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Display structure of downloaded files
+        run: ls -lR
+
+      - name: Rename files
+        run: |
+          mv files-ingest-armv7-unknown-linux-gnueabihf/files-ingest files-ingest-armv7-unknown-linux-gnueabihf/files-ingest-armv7-unknown-linux-gnueabihf
+          mv files-ingest-x86_64-unknown-linux-gnu/files-ingest files-ingest-x86_64-unknown-linux-gnu/files-ingest-x86_64-unknown-linux-gnu
+          mv files-ingest-x86_64-unknown-linux-musl/files-ingest files-ingest-x86_64-unknown-linux-musl/files-ingest-x86_64-unknown-linux-musl
+          mv files-ingest-aarch64-apple-darwin/files-ingest files-ingest-aarch64-apple-darwin/files-ingest-aarch64-apple-darwin
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            files-ingest-armv7-unknown-linux-gnueabihf/files-ingest-armv7-unknown-linux-gnueabihf
+            files-ingest-x86_64-unknown-linux-gnu/files-ingest-x86_64-unknown-linux-gnu
+            files-ingest-x86_64-unknown-linux-musl/files-ingest-x86_64-unknown-linux-musl
+            files-ingest-x86_64-pc-windows-msvc/files-ingest.exe
+            files-ingest-aarch64-apple-darwin/files-ingest-aarch64-apple-darwin
