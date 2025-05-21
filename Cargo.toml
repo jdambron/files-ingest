@@ -1,6 +1,6 @@
 [package]
 name = "files-ingest"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "Concatenate a directory full of files into a single prompt for use with LLMs"
 
