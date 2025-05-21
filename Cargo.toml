@@ -5,10 +5,9 @@ edition = "2024"
 description = "Concatenate a directory full of files into a single prompt for use with LLMs"
 
 [dependencies]
-clap = { version = "4.5.37", features = [
+clap = { version = "4.5.38", features = [
   "derive",
 ] } # For command-line argument parsing
 atty = "0.2.14"
 ignore = "0.4.23" # For directory walking with gitignore support
-lazy_static = "1.5.0" # For the markdown language map
 thiserror = "2.0.12"
